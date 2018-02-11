@@ -1,4 +1,5 @@
 ## Hearthstone Deck Generator
+CircleCI Status: [![CircleCI](https://circleci.com/gh/buckley-w-david/hs_markov.svg?style=svg)](https://circleci.com/gh/buckley-w-david/hs_markov)
 
 ### Installation
 
