@@ -39,6 +39,6 @@ jobs:
             pytest tests
 workflows:
   version: 2
-  node_and_python:
+  python:
     jobs:
       - python
