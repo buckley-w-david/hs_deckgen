@@ -2,11 +2,11 @@ import setuptools
 
 
 setuptools.setup(
-    name='hs_markov',
+    name='hs_deckgen',
     version='0.0.1',
     long_description='',
     author='David Buckley',
-    url='https://github.com/buckley-w-david/hs_markov',
+    url='https://github.com/buckley-w-david/hs_deckgen',
     packages=setuptools.find_packages('src'),
     package_dir={'': 'src'},
     classifiers=[
@@ -17,6 +17,6 @@ setuptools.setup(
     ],
     entry_points='''
         [console_scripts]
-        hsdeck=hs_markov.cli:main
+        hsdeck=hs_deckgen.cli:main
     '''
 )
