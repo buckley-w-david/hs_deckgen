@@ -1,5 +1,5 @@
 from click.testing import CliRunner
-from hs_markov import cli
+from hs_deckgen import cli
 
 def test_main() -> None:
     runner = CliRunner()
