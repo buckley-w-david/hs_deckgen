@@ -3,7 +3,7 @@ import json
 import typing
 import sys
 import click
-from hs_deckgen import deck as hs_deck
+from hs_deckgen import hearthstone
 from hs_deckgen import model as hs_model
 
 
@@ -31,22 +31,31 @@ def main() -> None:
 @click.option('--partial', type=click.Path(exists=True))
 @click.option('--output', type=click.Path(), required=False)
 def deck(model: str, partial: str, output: str) -> None:
-    with io_or_std(model, 'rb') as model_in, io_or_std(partial, 'r') as partial_in, io_or_std(output, 'w') as out:
-        partial = [hs_deck.Card(card_id) for card_id in json.load(partial_in)]
+    with open(model, 'rb') as model_in, io_or_std(partial, 'r') as partial_in, io_or_std(output, 'w') as out:
+        partial = [hearthstone.Card.from_json(card) for card in json.load(partial_in)]
+        scan = filter(
+            lambda hs_class: hs_class is not hearthstone.HSClass.NEUTRAL,
+            map(
+                lambda card: card.hs_class,
+                partial
+            )
+        )
+        hs_class = next(scan)
+
         mod = hs_model.HSModel.load(model_in)
-        deck = mod.generate_deck(partial)
+        deck = mod.generate_deck(partial, hs_class)
         deck.save(out)
 
 
 @main.command()
 @click.option('--outfile', type=click.Path(exists=False), required=False)
-@click.option('--train', type=click.Path(exists=True), required=False)
-@click.option('--notrain', nargs=0, required=False)
-def model(outfile, train, notrain) -> None:
-    if not notrain:
-        with io_or_std(train, 'r') as fin, io_or_std(outfile, 'wb') as fout:
+@click.option('--training', type=click.Path(exists=True), required=False)
+@click.option('--train/--notrain', default=True)
+def model(outfile, training, train) -> None:
+    if train:
+        with io_or_std(training, 'r') as fin, io_or_std(outfile, 'wb') as fout:
             deck_locations = json.load(fin)
-            decks = [hs_deck.Deck.from_hsreplay(deck_url) for deck_url in deck_locations]
+            decks = (hearthstone.Deck.from_hsreplay(deck_url) for deck_url in deck_locations)
             mod = hs_model.HSModel.from_decks(decks)
             mod.save(fout)
     else:
