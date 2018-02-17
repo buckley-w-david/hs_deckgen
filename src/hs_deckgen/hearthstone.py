@@ -6,6 +6,7 @@ import urllib.request
 import urllib.parse
 from lxml import html, etree
 import requests
+import base64
 
 
 class HSClass(enum.Enum):
@@ -39,6 +40,18 @@ _HSREPLAY_TO_CLASS = {
     1066: HSClass.SHAMAN,
     893: HSClass.WARLOCK,
     7: HSClass.WARRIOR,
+}
+
+_CLASS_TO_DB = {
+    HSClass.DRUID: 274,
+    HSClass.HUNTER: 31,
+    HSClass.MAGE: 637,
+    HSClass.PALADIN: 671,
+    HSClass.PRIEST: 813,
+    HSClass.ROGUE: 930,
+    HSClass.SHAMAN: 1066,
+    HSClass.WARLOCK: 893,
+    HSClass.WARRIOR: 7,
 }
 
 
@@ -78,10 +91,35 @@ class _Deck(typing.NamedTuple):
     hs_class: HSClass
 
 
+
+def to_varint(i: int) -> bytes:
+    buf = b""
+    while True:
+        towrite = i & 0x7f
+        i >>= 7
+        if i:
+            buf += bytes((towrite | 0x80, ))
+        else:
+            buf += bytes((towrite, ))
+            break
+
+    return buf
+
+
 class Deck(_Deck):
 
     @classmethod
-    def from_cards(cls, cards: typing.List[Card], hs_class: HSClass) -> 'Deck':
+    def from_cards(cls, cards: typing.List[Card], hs_class: typing.Optional[HSClass]=None) -> 'Deck':
+        if hs_class is None:
+            scan = filter(
+                lambda hs_class: hs_class is not HSClass.NEUTRAL,
+                map(
+                    lambda card: card.hs_class,
+                    cards
+                )
+            )
+            hs_class = next(scan)
+
         return Deck(
             cards=cards,
             hs_class=hs_class
@@ -104,7 +142,8 @@ class Deck(_Deck):
         deck_info = document.xpath("body/div[@id = 'deck-info']")[0]
         cards = [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')]
 
-        hs_class = _HSREPLAY_TO_CLASS.get(deck_info.attrib['data-deck-class'])
+        hs_class = getattr(HSClass, deck_info.attrib['data-deck-class'])
+        # import pdb; pdb.set_trace()
 
         return Deck(cards, hs_class)
 
@@ -166,8 +205,6 @@ class ReplayAPI:
         else:
             snipper = itertools.count()
 
-        import pdb; pdb.set_trace()
-
         for _, href in zip(snipper, document.xpath(query)):
             url = urllib.parse.urljoin(base, href)
             yield Deck.from_hsreplay(url)
@@ -207,5 +244,5 @@ class HearthstoneAPI:
 
     @classmethod
     @lazy_cards
-    def all_cards(cls) -> typing.Iterable[Card]:
+    def all_cards(cls) -> typing.Set[Card]:
         return cls._CARDS.values()

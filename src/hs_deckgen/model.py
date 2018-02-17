@@ -24,7 +24,7 @@ class HSModel:
         m = len(cards)
 
         self._model = np.zeros([m, m])
-        self._norm = np.ones([m, 1])
+        self._norm = np.ones([m])
 
 
     def _db_to_model_index(self, db_id: int) -> typing.Optional[int]:
@@ -35,25 +35,28 @@ class HSModel:
 
     #TODO - Other constraints (mana, stats, etc)
     #FIXME - Normalization too harsh?
-    def generate_deck(self, partial: typing.List[hearthstone.Card], hs_class: hearthstone.HSClass):
+    def generate_deck(self, partial: typing.List[hearthstone.Card], hs_class: hearthstone.HSClass, deck_size=30):
         assert len(partial) > 0
-        assert len(partial) <= 30
-
-        import pdb; pdb.set_trace()
+        assert len(partial) <= deck_size
 
         class_indexs = self._class_indexs.copy()
         class_indexs.pop(hs_class)
         class_indexs.pop(hearthstone.HSClass.NEUTRAL)
 
         model = self._model / self._norm
-        # import pdb;pdb.set_trace()
         for indexs in class_indexs.values():
             model[:,indexs] = -1
 
         generated_deck = []
         generated_deck.extend(partial)
 
-        for _ in range(30 - len(generated_deck)):
+        for card in generated_deck:
+            if card.rarity is hearthstone.Rarity.LEGENDARY:
+                model[:,self._db_to_model_index(card.db_id)] = -1
+
+        import pdb; pdb.set_trace()
+
+        for _ in range(deck_size - len(generated_deck)):
             combined = np.sum(model[[self._db_to_model_index(card.db_id) for card in generated_deck]], axis=0)
 
             index = np.random.choice(np.argwhere(combined == np.max(combined)).ravel())
@@ -78,7 +81,7 @@ class HSModel:
             row_idx = self._db_to_model_index(card.db_id)
             self._model[row_idx, [self._db_to_model_index(sub_card.db_id) for sub_card in (unique - {card})]] += 1
             self._model[row_idx, row_idx] += (card in doubles)
-            self._norm[row_idx][0] += 1
+            self._norm[row_idx] += 1
 
     @classmethod
     def from_decks(cls, decks: typing.Iterable[hearthstone.Deck]) -> 'HSModel':
