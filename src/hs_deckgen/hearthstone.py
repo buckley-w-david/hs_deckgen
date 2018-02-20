@@ -143,7 +143,6 @@ class Deck(_Deck):
         cards = [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')]
 
         hs_class = getattr(HSClass, deck_info.attrib['data-deck-class'])
-        # import pdb; pdb.set_trace()
 
         return Deck(cards, hs_class)
 
