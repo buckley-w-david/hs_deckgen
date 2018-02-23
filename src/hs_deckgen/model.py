@@ -14,6 +14,7 @@ class BijectiveMap():
     def __init__(self, tuples: typing.Optional[typing.List[typing.Tuple[L, R]]] = None) -> None:
         self._left: typing.Dict[L, R] = {}
         self._right: typing.Dict[R, L] = {}
+
         if tuples:
             for l, r in tuples:
                 self._left[l] = r

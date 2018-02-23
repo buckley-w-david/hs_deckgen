@@ -91,19 +91,16 @@ class _Deck(typing.NamedTuple):
     hs_class: HSClass
 
 
-
 def to_varint(i: int) -> bytes:
-    buf = b""
-    while True:
+    buffer: typing.List[bytes] = []
+
+    for _ in range((i.bit_length()-1) // 7):
         towrite = i & 0x7f
         i >>= 7
-        if i:
-            buf += bytes((towrite | 0x80, ))
-        else:
-            buf += bytes((towrite, ))
-            break
+        buffer.append((towrite | 0x80).to_bytes(length=1, byteorder='big'))
 
-    return buf
+    buffer.append(i.to_bytes(length=1, byteorder='big'))
+    return b''.join(buffer)
 
 
 class Deck(_Deck):
@@ -176,7 +173,29 @@ class Deck(_Deck):
         return doubles
 
     def to_deck_code(self) -> str:
-        raise NotImplementedError()
+        deck_code_list = [0, 1, 1]
+        deck_code_list.append(1)
+        deck_code_list.append(_CLASS_TO_DB.get(self.hs_class))
+
+        unique = self.unique
+        doubles = self.doubles
+        singles = unique - doubles
+
+        deck_code_list.append(len(singles))
+        db_key = lambda card: card.db_id
+
+        for card in sorted(singles, key=db_key):
+            deck_code_list.append(card.db_id)
+
+        deck_code_list.append(len(doubles))
+        for card in sorted(doubles, key=db_key):
+            deck_code_list.append(card.db_id)
+
+        deck_code_list.append(0)
+        deck_code = b''.join(map(to_varint, deck_code_list))
+
+        encoded = base64.b64encode(deck_code)
+        return encoded.decode("utf-8")
 
     def __iter__(self):
         for card in self.cards:
