@@ -4,7 +4,11 @@ import pickle
 import typing
 import numpy as np
 import requests
-from hs_deckgen import hearthstone
+
+from hearthstone import hsdata
+from hearthstone import deck
+from hearthstone import card
+from hearthstone import api
 
 
 L = typing.TypeVar('L')
@@ -39,14 +43,14 @@ class BijectiveMap():
 class HSModel:
 
     def __init__(self):
-        cards = hearthstone.HearthstoneAPI.all_cards()
+        cards = api.HearthstoneAPI.all_cards()
 
-        self._class_indexs = {hearthstone.HSClass.NEUTRAL: []}
+        self._class_indexs = {hsdata.HSClass.NEUTRAL: []}
         self._map = _map = BijectiveMap()
         count = 0
 
         for i, card in enumerate(cards):
-            for idx in range(1 + (card.rarity is not hearthstone.Rarity.LEGENDARY)):
+            for idx in range(1 + (card.rarity is not hsdata.Rarity.LEGENDARY)):
                 self._class_indexs.setdefault(card.hs_class, []).append(count)
                 _map[(card.db_id, idx)] = count
                 count += 1
@@ -55,7 +59,7 @@ class HSModel:
         self._norm = np.ones([count])
 
 
-    def _deck_to_rows(self, deck: typing.List[hearthstone.Card]) -> typing.List[int]:
+    def _deck_to_rows(self, deck: typing.List[card.Card]) -> typing.List[int]:
         keyfunc = lambda card: card.db_id
         cards = sorted(deck, key=keyfunc)
         return [self._map.left[(sub_db_id, sub_count)]
@@ -69,13 +73,13 @@ class HSModel:
 
     #TODO - Other constraints (mana, stats, etc)
     #FIXME - Normalization too harsh?
-    def generate_deck(self, partial: typing.List[hearthstone.Card], hs_class: hearthstone.HSClass, deck_size=30):
+    def generate_deck(self, partial: typing.List[card.Card], hs_class: hsdata.HSClass, deck_size=30):
         assert len(partial) > 0
         assert len(partial) <= deck_size
 
         class_indexs = self._class_indexs.copy()
         class_indexs.pop(hs_class)
-        class_indexs.pop(hearthstone.HSClass.NEUTRAL)
+        class_indexs.pop(hsdata.HSClass.NEUTRAL)
 
         model = self._model / self._norm
         for indexs in class_indexs.values():
@@ -94,15 +98,15 @@ class HSModel:
             model[:,index] = -1
 
             card_id, n = self._map.right[index]
-            card = hearthstone.HearthstoneAPI.card_from_id(card_id)
+            card = api.HearthstoneAPI.card_from_id(card_id)
 
             generated_deck.append(card)
 
 
-        return hearthstone.Deck(generated_deck, hs_class)
+        return deck.Deck(generated_deck, hs_class)
 
     @classmethod
-    def from_decks(cls, decks: typing.Iterable[hearthstone.Deck]) -> 'HSModel':
+    def from_decks(cls, decks: typing.Iterable[deck.Deck]) -> 'HSModel':
         model = HSModel()
         for deck in decks:
             model.train(deck)

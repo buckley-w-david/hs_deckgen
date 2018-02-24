@@ -3,7 +3,10 @@ import json
 import typing
 import sys
 import click
-from hs_deckgen import hearthstone
+from hearthstone import deck
+from hearthstone import card
+from hearthstone import hsdata
+
 from hs_deckgen import model as hs_model
 
 
@@ -32,9 +35,9 @@ def main() -> None:
 @click.option('--output', type=click.Path(), required=False)
 def deck(model: str, partial: str, output: str) -> None:
     with open(model, 'rb') as model_in, io_or_std(partial, 'r') as partial_in, io_or_std(output, 'w') as out:
-        partial = [hearthstone.Card.from_json(card) for card in json.load(partial_in)]
+        partial = [card.Card.from_json(dict_card) for dict_card in json.load(partial_in)]
         scan = filter(
-            lambda hs_class: hs_class is not hearthstone.HSClass.NEUTRAL,
+            lambda hs_class: hs_class is not hsdata.HSClass.NEUTRAL,
             map(
                 lambda card: card.hs_class,
                 partial
@@ -55,7 +58,7 @@ def model(outfile, training, train) -> None:
     if train:
         with io_or_std(training, 'r') as fin, io_or_std(outfile, 'wb') as fout:
             deck_locations = json.load(fin)
-            decks = (hearthstone.Deck.from_hsreplay(deck_url) for deck_url in deck_locations)
+            decks = (deck.Deck.from_hsreplay(deck_url) for deck_url in deck_locations)
             mod = hs_model.HSModel.from_decks(decks)
             mod.save(fout)
     else:
