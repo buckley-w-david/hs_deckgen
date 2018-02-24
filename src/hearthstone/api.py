@@ -40,6 +40,24 @@ class ReplayAPI:
             yield deck.Deck.from_hsreplay(url)
 
 
+    @classmethod
+    def deck_from_url(cls, url: str) -> deck.Deck:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' + \
+                          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
+        }
+
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as request:
+            document = html.parse(request)
+
+        deck_info = document.xpath("body/div[@id = 'deck-info']")[0]
+        cards = [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')]
+
+        hs_class = getattr(hsdata.HSClass, deck_info.attrib['data-deck-class'])
+
+        return deck.Deck(cards, hs_class)
+
+
 class HearthstoneAPI:
 
     _CARDS = None
@@ -70,25 +88,6 @@ class HearthstoneAPI:
     @lazy_cards
     def card_from_id(cls, card_id: int) -> typing.Optional[card.Card]:
         return cls._CARDS.get(card_id)
-
-
-    @classmethod
-    def deck_from_url(cls, url: str) -> deck.Deck:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' + \
-                          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
-        }
-
-        with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as request:
-            document = html.parse(request)
-
-        deck_info = document.xpath("body/div[@id = 'deck-info']")[0]
-        cards = [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')]
-
-        hs_class = getattr(hsdata.HSClass, deck_info.attrib['data-deck-class'])
-
-        return deck.Deck(cards, hs_class)
-
 
     @classmethod
     @lazy_cards

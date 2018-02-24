@@ -18,5 +18,6 @@ setuptools.setup(
     entry_points='''
         [console_scripts]
         hsdeck=hs_deckgen.cli:main
+        trainer=trainer.cli:main
     '''
 )
