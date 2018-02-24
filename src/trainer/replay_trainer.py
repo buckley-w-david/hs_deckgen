@@ -26,7 +26,7 @@ class ReplayTrainer:
 
     @classmethod
     @lazy_browser
-    def top_30_days(cls) -> typing.List[deck.Deck]:
+    def top_30_days(cls) -> typing.Iterator[deck.Deck]:
         browser = cls._BROWSER
 
         browser.get("https://hsreplay.net/decks/#timeRange=LAST_30_DAYS")
