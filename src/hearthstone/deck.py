@@ -1,3 +1,4 @@
+import enum
 import typing
 import json
 import urllib.request
@@ -8,6 +9,10 @@ import base64
 from hearthstone import card
 from hearthstone import hsdata
 
+
+class DeckSerialization(enum.Enum):
+    JSON = enum.auto()
+    CODE = enum.auto()
 
 
 _HSREPLAY_TO_CLASS = {
@@ -88,8 +93,11 @@ class Deck(_Deck):
     def load(cls, stream: typing.IO[str]) -> 'Deck':
         return cls.from_json(json.load(stream))
 
-    def save(self, stream: typing.IO[str]) -> None:
-        json.dump({'cards': [card.to_json() for card in self.cards], 'hs_class': self.hs_class.name}, stream)
+    def save(self, stream: typing.IO[str], mode=DeckSerialization.CODE) -> None:
+        if mode is DeckSerialization.JSON:
+            json.dump({'cards': [card.to_json() for card in self.cards], 'hs_class': self.hs_class.name}, stream)
+        else:
+            stream.write(self.to_deck_code())
 
     @property
     def unique(self) -> typing.Set[card.Card]:

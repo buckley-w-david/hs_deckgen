@@ -26,7 +26,7 @@ class ReplayTrainer:
 
     @classmethod
     @lazy_browser
-    def top_30_days(cls) -> typing.Iterator[deck.Deck]:
+    def top_30_days(cls, max_page: typing.Optional[int] = None) -> typing.Iterator[deck.Deck]:
         browser = cls._BROWSER
 
         browser.get("https://hsreplay.net/decks/#timeRange=LAST_30_DAYS")
@@ -35,12 +35,15 @@ class ReplayTrainer:
         pages = int(deck_list_wrapper.find_elements_by_xpath("div/div/nav/ul/li[@class = 'visible-lg-inline']/a")[-1].text)
         forward_button = deck_list_wrapper.find_element_by_xpath('div/div/nav/ul/li[not(@*)]/a')
 
+        if max_page:
+            pages = min(max_page, pages)
+
         for _ in range(pages):
             deck_links = deck_list_wrapper.find_elements_by_xpath("div[@class = 'deck-list']/ul/li/a")
             yield from (api.ReplayAPI.deck_from_url(node.get_attribute('href')) for node in deck_links)
             forward_button.click()
 
     @classmethod
-    def new_model(cls) -> model.HSModel:
-        return model.HSModel.from_decks(cls.top_30_days())
+    def new_model(cls, max_page: typing.Optional[int] = None) -> model.HSModel:
+        return model.HSModel.from_decks(cls.top_30_days(max_page))
 

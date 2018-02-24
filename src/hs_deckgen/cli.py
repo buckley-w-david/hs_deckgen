@@ -6,6 +6,7 @@ import click
 from hearthstone import deck
 from hearthstone import card
 from hearthstone import hsdata
+from hearthstone import api
 
 from hs_deckgen import model as hs_model
 
@@ -31,24 +32,29 @@ def main() -> None:
 
 @main.command()
 @click.option('--model', type=click.Path(exists=True), required=True)
+@click.option('--hsclass', type=str, required=False)
 @click.option('--partial', type=click.Path(exists=True))
 @click.option('--output', type=click.Path(), required=False)
-def deck(model: str, partial: str, output: str) -> None:
+def deck(model: str, hsclass: str, partial: str, output: str) -> None:
+
     with open(model, 'rb') as model_in, io_or_std(partial, 'r') as partial_in, io_or_std(output, 'w') as out:
-        partial = [card.Card.from_json(dict_card) for dict_card in json.load(partial_in)]
-        scan = filter(
-            lambda hs_class: hs_class is not hsdata.HSClass.NEUTRAL,
-            map(
-                lambda card: card.hs_class,
-                partial
+        partial = [api.HearthstoneAPI.card_from_id(id) for id in json.load(partial_in)]
+        if not hsclass:
+            scan = filter(
+                lambda hs_class: hs_class is not hsdata.HSClass.NEUTRAL,
+                map(
+                    lambda card: card.hs_class,
+                    partial
+                )
             )
-        )
-        hs_class = next(scan)
+            hs_class = next(scan)
+        else:
+            hs_class = getattr(hsdata.HSClass, hsclass)
 
         mod = hs_model.HSModel.load(model_in)
         deck = mod.generate_deck(partial, hs_class)
         deck.save(out)
-
+        print()
 
 @main.command()
 @click.option('--outfile', type=click.Path(exists=False), required=False)

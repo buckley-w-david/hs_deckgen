@@ -27,7 +27,8 @@ def main() -> None:
 
 @main.command()
 @click.option('--outfile', type=click.Path(exists=False), required=False)
-def replay(outfile) -> None:
+@click.option('--pages', type=int, required=False)
+def replay(outfile: str, pages: typing.Optional[int]) -> None:
     with io_or_std(outfile, 'wb') as fout:
-        mod = replay_trainer.ReplayTrainer.new_model()
+        mod = replay_trainer.ReplayTrainer.new_model(pages)
         mod.save(fout)

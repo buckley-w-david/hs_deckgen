@@ -41,7 +41,7 @@ class ReplayAPI:
 
 
     @classmethod
-    def deck_from_url(cls, url: str) -> deck.Deck:
+    def deck_from_url(cls, url: str) -> typing.Optional[deck.Deck]:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' + \
                           'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
@@ -51,7 +51,7 @@ class ReplayAPI:
             document = html.parse(request)
 
         deck_info = document.xpath("body/div[@id = 'deck-info']")[0]
-        cards = [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')]
+        cards = filter(lambda card: card, [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')])
 
         hs_class = getattr(hsdata.HSClass, deck_info.attrib['data-deck-class'])
 
