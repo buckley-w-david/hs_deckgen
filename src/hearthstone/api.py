@@ -15,31 +15,6 @@ from hearthstone import hsdata
 
 class ReplayAPI:
 
-    # TODO - fix
-    @classmethod
-    def top_decks(cls, n=None) -> typing.Iterator[deck.Deck]:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' + \
-                          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
-        }
-
-        base = 'https://hsreplay.net'
-        url = urllib.parse.urljoin(base, 'decks')
-
-        with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as request:
-            document = html.parse(request)
-
-        query = "body/div[@id = 'decks-container']/div[@class = 'deck-list-wrapper']/div[@class = 'deck-list']/ul/li/a/@href"
-        if n:
-            snipper = range(n)
-        else:
-            snipper = itertools.count()
-
-        for _, href in zip(snipper, document.xpath(query)):
-            url = urllib.parse.urljoin(base, href)
-            yield deck.Deck.from_hsreplay(url)
-
-
     @classmethod
     def deck_from_url(cls, url: str) -> typing.Optional[deck.Deck]:
         headers = {
@@ -54,6 +29,31 @@ class ReplayAPI:
         cards = filter(lambda card: card, [HearthstoneAPI.card_from_id(int(id)) for id in deck_info.attrib['data-deck-cards'].split(',')])
 
         hs_class = getattr(hsdata.HSClass, deck_info.attrib['data-deck-class'])
+
+        return deck.Deck(cards, hs_class)
+
+
+class HearthpwnAPI:
+
+    @classmethod
+    def deck_from_url(cls, url: str) -> typing.Optional[deck.Deck]:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' + \
+                          'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
+        }
+
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as request:
+            document = html.parse(request)
+
+        # So robust
+        hs_class = getattr(hsdata.HSClass, document.xpath('body/div/div/div/div/section/header/section/span/@class')[0].split('-')[-1].upper())
+
+        card_nodes = document.xpath('body/div/div/div/div/section/div/div/aside/section/div/div/table/tbody/tr/td/b/a')
+        cards = []
+
+        for card_node in card_nodes:
+            for _ in range(int(card_node.attrib['data-count'])):
+                cards.append(HearthstoneAPI.card_from_id(int(card_node.attrib['data-id'])))
 
         return deck.Deck(cards, hs_class)
 

@@ -66,15 +66,15 @@ class HSModel:
                 for sub_db_id, sub_group in itertools.groupby(cards, key=keyfunc)
                 for sub_count, _ in enumerate(sub_group)]
 
-    def train(self, deck):
+    def train(self, deck: typing.List[card.Card]):
         rows = np.array(self._deck_to_rows(deck))
         self._model[rows[:, None], rows] += len(rows)
         self._norm[rows] += len(rows)
 
     #TODO - Other constraints (mana, stats, etc)
-    #FIXME - Normalization too harsh?
+    #FIXME - Normalization still not right
     def generate_deck(self, partial: typing.List[card.Card], hs_class: hsdata.HSClass, deck_size=30):
-        assert len(partial) > 0
+        assert len(partial) >= 0
         assert len(partial) <= deck_size
 
         class_indexs = self._class_indexs.copy()
@@ -89,15 +89,23 @@ class HSModel:
         generated_deck = []
         generated_deck.extend(partial)
 
+        # import pdb; pdb.set_trace()
         model[:, self._deck_to_rows(generated_deck)] = -1
+        chosen = set()
 
         for _ in range(deck_size - len(generated_deck)):
             rows = self._deck_to_rows(generated_deck)
             combined = np.sum(model[rows], axis=0)
             index = np.random.choice(np.argwhere(combined == np.max(combined)).ravel())
-            model[:,index] = -1
-
             card_id, n = self._map.right[index]
+
+            if n and index-1 not in chosen:
+                model[:,index-1] = -1
+                chosen.add(index-1)
+            else:
+                model[:,index] = -1
+                chosen.add(index)
+
             card = api.HearthstoneAPI.card_from_id(card_id)
 
             generated_deck.append(card)
